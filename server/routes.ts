@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from 'ws';
-import { storage } from "./storage";
+import { storage as dataStorage } from "./storage";
 import { 
   insertUserSchema, 
   insertClubSchema, 
@@ -23,7 +23,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Configure storage for multer
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir);
   },
@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: multerStorage });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
@@ -48,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      const user = await storage.createUser(userData);
+      const user = await dataStorage.createUser(userData);
       return res.status(201).json(user);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const user = await storage.getUser(id);
+      const user = await dataStorage.getUser(id);
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -76,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Club routes
   app.get("/api/clubs", async (req, res) => {
     try {
-      const clubs = await storage.getAllClubs();
+      const clubs = await dataStorage.getAllClubs();
       return res.json(clubs);
     } catch (error) {
       return res.status(500).json({ error: "Internal server error" });
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clubs/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const club = await storage.getClub(id);
+      const club = await dataStorage.getClub(id);
       
       if (!club) {
         return res.status(404).json({ error: "Club not found" });
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clubs", async (req, res) => {
     try {
       const clubData = insertClubSchema.parse(req.body);
-      const club = await storage.createClub(clubData);
+      const club = await dataStorage.createClub(clubData);
       return res.status(201).json(club);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -114,18 +114,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Match routes
   app.get("/api/matches", async (req, res) => {
     try {
-      const matches = await storage.getAllMatches();
+      const matches = await dataStorage.getAllMatches();
       
       // Enhance matches with club details
       const enhancedMatches = await Promise.all(
         matches.map(async (match) => {
-          const homeTeam = await storage.getClub(match.homeTeamId);
-          const awayTeam = await storage.getClub(match.awayTeamId);
+          const homeTeam = await dataStorage.getClub(match.homeTeamId);
+          const awayTeam = await dataStorage.getClub(match.awayTeamId);
           
           // Get scouting clubs details
           const scoutingClubIds = match.scoutingClubs as number[];
           const scoutingClubs = await Promise.all(
-            scoutingClubIds.map(id => storage.getClub(id))
+            scoutingClubIds.map(id => dataStorage.getClub(id))
           );
           
           return {
@@ -146,20 +146,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/matches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const match = await storage.getMatch(id);
+      const match = await dataStorage.getMatch(id);
       
       if (!match) {
         return res.status(404).json({ error: "Match not found" });
       }
       
       // Enhance match with club details
-      const homeTeam = await storage.getClub(match.homeTeamId);
-      const awayTeam = await storage.getClub(match.awayTeamId);
+      const homeTeam = await dataStorage.getClub(match.homeTeamId);
+      const awayTeam = await dataStorage.getClub(match.awayTeamId);
       
       // Get scouting clubs details
       const scoutingClubIds = match.scoutingClubs as number[];
       const scoutingClubs = await Promise.all(
-        scoutingClubIds.map(id => storage.getClub(id))
+        scoutingClubIds.map(id => dataStorage.getClub(id))
       );
       
       const enhancedMatch = {
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/matches", async (req, res) => {
     try {
       const matchData = insertMatchSchema.parse(req.body);
-      const match = await storage.createMatch(matchData);
+      const match = await dataStorage.createMatch(matchData);
       return res.status(201).json(match);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -192,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scouting-reports", async (req, res) => {
     try {
       const reportData = insertScoutingReportSchema.parse(req.body);
-      const report = await storage.createScoutingReport(reportData);
+      const report = await dataStorage.createScoutingReport(reportData);
       return res.status(201).json(report);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -209,17 +209,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let reports = [];
       
       if (userId) {
-        reports = await storage.getScoutingReportsByUserId(parseInt(userId as string));
+        reports = await dataStorage.getScoutingReportsByUserId(parseInt(userId as string));
       } else if (matchId) {
-        reports = await storage.getScoutingReportsByMatchId(parseInt(matchId as string));
+        reports = await dataStorage.getScoutingReportsByMatchId(parseInt(matchId as string));
       } else if (clubId) {
-        reports = await storage.getScoutingReportsByClubId(parseInt(clubId as string));
+        reports = await dataStorage.getScoutingReportsByClubId(parseInt(clubId as string));
       } else {
         // Return all reports if no filter is specified
         reports = Array.from(
           (await Promise.all(
-            Array(storage['reportIdCounter']).fill(0).map((_, i) => 
-              storage.getScoutingReport(i + 1)
+            Array(dataStorage['reportIdCounter']).fill(0).map((_, i) => 
+              dataStorage.getScoutingReport(i + 1)
             )
           )).filter(Boolean)
         );
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/scouting-reports/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const report = await storage.getScoutingReport(id);
+      const report = await dataStorage.getScoutingReport(id);
       
       if (!report) {
         return res.status(404).json({ error: "Scouting report not found" });
@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { adminId, feedback } = req.body;
-      const updatedReport = await storage.likeScoutingReport(id, adminId, feedback);
+      const updatedReport = await dataStorage.likeScoutingReport(id, adminId, feedback);
       
       if (!updatedReport) {
         return res.status(404).json({ error: "Scouting report not found" });
@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const photoUrl = `/uploads/${req.file.filename}`;
-      const updatedReport = await storage.updateScoutingReportPhoto(id, photoUrl);
+      const updatedReport = await dataStorage.updateScoutingReportPhoto(id, photoUrl);
       
       if (!updatedReport) {
         return res.status(404).json({ error: "Scouting report not found" });
@@ -293,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID is required" });
       }
       
-      const notifications = await storage.getNotificationsByUserId(parseInt(userId as string));
+      const notifications = await dataStorage.getNotificationsByUserId(parseInt(userId as string));
       return res.json(notifications);
     } catch (error) {
       return res.status(500).json({ error: "Internal server error" });
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/notifications/:id/read", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const notification = await storage.markNotificationAsRead(id);
+      const notification = await dataStorage.markNotificationAsRead(id);
       
       if (!notification) {
         return res.status(404).json({ error: "Notification not found" });
@@ -324,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User ID is required" });
       }
       
-      const rewards = await storage.getRewardsByUserId(parseInt(userId as string));
+      const rewards = await dataStorage.getRewardsByUserId(parseInt(userId as string));
       return res.json(rewards);
     } catch (error) {
       return res.status(500).json({ error: "Internal server error" });
@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rewards", async (req, res) => {
     try {
       const rewardData = insertRewardSchema.parse(req.body);
-      const reward = await storage.createReward(rewardData);
+      const reward = await dataStorage.createReward(rewardData);
       return res.status(201).json(reward);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -347,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rewards/:id/redeem", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const reward = await storage.redeemReward(id);
+      const reward = await dataStorage.redeemReward(id);
       
       if (!reward) {
         return res.status(404).json({ error: "Reward not found" });
@@ -363,20 +363,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-profile/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const user = await storage.getUser(id);
+      const user = await dataStorage.getUser(id);
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
       
       // Get user's reports
-      const reports = await storage.getScoutingReportsByUserId(id);
+      const reports = await dataStorage.getScoutingReportsByUserId(id);
       
       // Get user's rewards
-      const rewards = await storage.getRewardsByUserId(id);
+      const rewards = await dataStorage.getRewardsByUserId(id);
       
       // Get user's unread notifications count
-      const notifications = await storage.getNotificationsByUserId(id);
+      const notifications = await dataStorage.getNotificationsByUserId(id);
       const unreadNotifications = notifications.filter(n => !n.read);
       
       // Count liked reports

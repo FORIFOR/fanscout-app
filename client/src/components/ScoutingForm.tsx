@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,7 +8,8 @@ import {
   FormField, 
   FormItem, 
   FormLabel, 
-  FormMessage 
+  FormMessage,
+  FormDescription
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +20,9 @@ import { useClubs } from '@/hooks/useClubs';
 import { useCreateReport } from '@/hooks/useReports';
 import { useToast } from '@/hooks/use-toast';
 import { Match } from '@/types';
+import { Camera, Upload, X } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface ScoutingFormProps {
   match: Match;
@@ -59,6 +63,10 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
   const { clubs } = useClubs();
   const createReport = useCreateReport();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -78,6 +86,28 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
     },
   });
   
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setPhotoFile(file);
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
   const onSubmit = async (data: FormData) => {
     try {
       // Extract clubs that are scouting this match
@@ -95,13 +125,42 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
         return;
       }
       
-      await createReport.mutateAsync({
+      const createdReport = await createReport.mutateAsync({
         ...data,
         clubId: parseInt(data.clubId),
         playerAge: parseInt(data.playerAge),
         matchId: match.id,
         userId: 1, // Using a default user ID for now
       });
+      
+      // If a photo was selected, upload it for the new report
+      if (photoFile && createdReport) {
+        setIsUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append('photo', photoFile);
+          
+          await apiRequest(`/api/scouting-reports/${createdReport.id}/photo`, {
+            method: 'POST',
+            body: formData,
+            // Don't set Content-Type header - the browser will set it with the boundary for multipart/form-data
+          });
+          
+          toast({
+            title: 'Photo uploaded',
+            description: 'The player photo has been attached to your report.',
+          });
+        } catch (uploadError) {
+          console.error('Error uploading photo:', uploadError);
+          toast({
+            title: 'Photo upload failed',
+            description: 'Your report was saved, but the photo could not be uploaded.',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsUploading(false);
+        }
+      }
       
       toast({
         title: 'Report submitted',
@@ -328,6 +387,58 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
               </FormItem>
             )}
           />
+          
+          {/* Photo Upload Section */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h5 className="font-medium mb-3">Player Photo</h5>
+            <div className="space-y-4">
+              <FormItem>
+                <FormLabel>Upload Player Photo (Optional)</FormLabel>
+                <FormDescription>
+                  Add a photo of the player to help with identification.
+                </FormDescription>
+                
+                {photoPreview ? (
+                  <Card className="relative overflow-hidden mt-2">
+                    <CardContent className="p-0">
+                      <div className="relative aspect-video w-full overflow-hidden">
+                        <img src={photoPreview} alt="Player preview" className="object-cover w-full h-full" />
+                        <Button 
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={removePhoto}
+                          className="absolute top-2 right-2 rounded-full w-8 h-8"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="mt-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      id="player-photo"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-24 flex flex-col items-center justify-center gap-2 border-dashed"
+                    >
+                      <Camera className="h-6 w-6" />
+                      <span>Click to add a player photo</span>
+                    </Button>
+                  </div>
+                )}
+              </FormItem>
+            </div>
+          </div>
           
           <div className="flex justify-end space-x-3">
             <Button 
