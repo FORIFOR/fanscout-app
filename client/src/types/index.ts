@@ -79,3 +79,13 @@ export interface Notification {
   relatedId: number | null;
   createdAt: Date | string;
 }
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  profileImage: string | null;
+  rewardPoints: number;
+  createdAt: Date | string;
+}

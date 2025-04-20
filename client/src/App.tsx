@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { ModalProvider } from "@/context/ModalContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -14,6 +16,7 @@ import Matches from "@/pages/Matches";
 import Reports from "@/pages/Reports";
 import Clubs from "@/pages/Clubs";
 import Rewards from "@/pages/Rewards";
+import AuthPage from "@/pages/auth-page";
 import MatchDetailModal from "@/components/MatchDetailModal";
 
 // Create a layout component to wrap the app content

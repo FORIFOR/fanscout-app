@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from 'ws';
+import { setupAuth } from "./auth";
 
 // Extend WebSocket type to include userId
 interface ExtendedWebSocket extends WebSocket {
@@ -41,6 +42,9 @@ const multerStorage = multer.diskStorage({
 const upload = multer({ storage: multerStorage });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+
   // Serve uploaded files
   app.use('/uploads', (req, res, next) => {
     const filePath = path.join(uploadsDir, req.path);
