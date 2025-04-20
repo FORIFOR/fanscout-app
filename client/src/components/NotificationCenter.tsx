@@ -11,16 +11,23 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotificationContext } from '@/context/NotificationContext';
+import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
 
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
   const { 
     notifications, 
     unreadCount, 
     markAsRead, 
     markAllAsRead 
   } = useNotificationContext();
+  
+  // If there's no authenticated user, don't show the notification center
+  if (!user) {
+    return null;
+  }
 
   const handleMarkAsRead = (id: number) => {
     markAsRead(id);

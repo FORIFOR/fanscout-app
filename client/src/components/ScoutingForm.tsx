@@ -19,6 +19,7 @@ import { Slider } from '@/components/ui/slider';
 import { useClubs } from '@/hooks/useClubs';
 import { useCreateReport, useUploadReportPhoto } from '@/hooks/useReports';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Match } from '@/types';
 import { Camera, Upload, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,6 +64,7 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
   const createReport = useCreateReport();
   const uploadPhoto = useUploadReportPhoto();
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -125,12 +127,21 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
         return;
       }
       
+      if (!user) {
+        toast({
+          title: 'Authentication required',
+          description: 'You must be logged in to submit a scouting report',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       const createdReport = await createReport.mutateAsync({
         ...data,
         clubId: parseInt(data.clubId),
         playerAge: parseInt(data.playerAge),
         matchId: match.id,
-        userId: 1, // Using a default user ID for now
+        userId: user.id
       });
       
       // If a photo was selected, upload it for the new report
