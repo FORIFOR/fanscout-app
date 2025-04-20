@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { ModalProvider } from "@/context/ModalContext";
 import { NotificationProvider } from "@/context/NotificationContext";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Header from "@/components/Header";
@@ -21,16 +21,19 @@ import MatchDetailModal from "@/components/MatchDetailModal";
 
 // Create a layout component to wrap the app content
 function AppLayout() {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-      <TabNavigation />
+      {user && <TabNavigation />}
       <main className="flex-grow">
         <Switch>
-          <Route path="/" component={Matches} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/clubs" component={Clubs} />
-          <Route path="/rewards" component={Rewards} />
+          <ProtectedRoute path="/" component={Matches} />
+          <ProtectedRoute path="/reports" component={Reports} />
+          <ProtectedRoute path="/clubs" component={Clubs} />
+          <ProtectedRoute path="/rewards" component={Rewards} />
+          <Route path="/auth" component={AuthPage} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -40,22 +43,29 @@ function AppLayout() {
   );
 }
 
+// A separate component for notifications that uses the authenticated user
+function AuthenticatedApp() {
+  const { user } = useAuth();
+  
+  return (
+    <NotificationProvider userId={user?.id || null}>
+      <ModalProvider>
+        <Toaster />
+        <AppLayout />
+      </ModalProvider>
+    </NotificationProvider>
+  );
+}
+
 // Put all the providers in the main App component
 function App() {
-  // For demonstration purposes, use a fixed user ID
-  // In a real app, this would come from authentication
-  const currentUserId = 1;
-  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
         <TooltipProvider>
-          <ModalProvider>
-            <NotificationProvider userId={currentUserId}>
-              <Toaster />
-              <AppLayout />
-            </NotificationProvider>
-          </ModalProvider>
+          <AuthProvider>
+            <AuthenticatedApp />
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
