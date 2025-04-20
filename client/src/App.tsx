@@ -15,35 +15,37 @@ import Clubs from "@/pages/Clubs";
 import Rewards from "@/pages/Rewards";
 import MatchDetailModal from "@/components/MatchDetailModal";
 
-function Router() {
+// Create a layout component to wrap the app content
+function AppLayout() {
   return (
-    <ModalProvider>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
-        <TabNavigation />
-        <main className="flex-grow">
-          <Switch>
-            <Route path="/" component={Matches} />
-            <Route path="/reports" component={Reports} />
-            <Route path="/clubs" component={Clubs} />
-            <Route path="/rewards" component={Rewards} />
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-        <MatchDetailModal />
-        <Footer />
-      </div>
-    </ModalProvider>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
+      <TabNavigation />
+      <main className="flex-grow">
+        <Switch>
+          <Route path="/" component={Matches} />
+          <Route path="/reports" component={Reports} />
+          <Route path="/clubs" component={Clubs} />
+          <Route path="/rewards" component={Rewards} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+      <MatchDetailModal />
+      <Footer />
+    </div>
   );
 }
 
+// Put all the providers in the main App component
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <ModalProvider>
+            <Toaster />
+            <AppLayout />
+          </ModalProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
