@@ -1,6 +1,11 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
+
+// Extend WebSocket type to include userId
+interface ExtendedWebSocket extends WebSocket {
+  userId?: number;
+}
 import { storage as dataStorage } from "./storage";
 import { 
   insertUserSchema, 
@@ -399,7 +404,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up WebSocket for realtime notifications
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
-  wss.on('connection', (ws) => {
+  // Function to broadcast notifications to specific users
+  const broadcastNotification = (userId: number, notification: any) => {
+    wss.clients.forEach((client: ExtendedWebSocket) => {
+      if (client.userId === userId) {
+        client.send(JSON.stringify({
+          type: 'notification',
+          notification
+        }));
+      }
+    });
+  };
+  
+  // Handle API routes that create notifications
+  const originalLikeScoutingReport = dataStorage.likeScoutingReport;
+  dataStorage.likeScoutingReport = async (id, adminId, feedback) => {
+    const report = await originalLikeScoutingReport.call(dataStorage, id, adminId, feedback);
+    
+    if (report) {
+      // Create a notification for the report author
+      const notification = await dataStorage.createNotification({
+        userId: report.userId,
+        type: 'report_liked',
+        message: `Your scouting report for ${report.playerName} has been liked by an admin!`,
+        relatedId: report.id
+      });
+      
+      // Broadcast the notification to connected clients
+      broadcastNotification(report.userId, notification);
+    }
+    
+    return report;
+  };
+  
+  wss.on('connection', (ws: ExtendedWebSocket) => {
     console.log('Client connected to WebSocket');
     
     ws.on('message', (message) => {

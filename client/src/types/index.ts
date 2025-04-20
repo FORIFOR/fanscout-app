@@ -49,7 +49,7 @@ export interface Club {
   createdAt: Date;
 }
 
-export type ScoutingRating = 1 | 2 | 3 | 4 | 5;
+export type ScoutingRating = 1 | 2 | 3 | 4 | 5 | number;
 
 export type PositionType = 'Goalkeeper' | 'Defender' | 'Midfielder' | 'Striker';
 
@@ -68,4 +68,14 @@ export interface ScoutingFormData {
   potential: ScoutingRating;
   observations: string;
   recommendation: string | RecommendationType;
+}
+
+export interface Notification {
+  id: number;
+  userId: number;
+  type: string;
+  message: string;
+  read: boolean;
+  relatedId: number | null;
+  createdAt: Date | string;
 }

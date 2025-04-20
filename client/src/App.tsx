@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { ModalProvider } from "@/context/ModalContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import NotFound from "@/pages/not-found";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -38,13 +39,19 @@ function AppLayout() {
 
 // Put all the providers in the main App component
 function App() {
+  // For demonstration purposes, use a fixed user ID
+  // In a real app, this would come from authentication
+  const currentUserId = 1;
+  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
         <TooltipProvider>
           <ModalProvider>
-            <Toaster />
-            <AppLayout />
+            <NotificationProvider userId={currentUserId}>
+              <Toaster />
+              <AppLayout />
+            </NotificationProvider>
           </ModalProvider>
         </TooltipProvider>
       </ThemeProvider>
