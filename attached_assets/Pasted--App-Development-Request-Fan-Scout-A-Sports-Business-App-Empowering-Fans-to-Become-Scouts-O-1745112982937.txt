@@ -1,0 +1,46 @@
+
+⸻
+
+App Development Request: “Fan Scout” – A Sports Business App Empowering Fans to Become Scouts
+
+Overview:
+
+We want to develop an iOS application that allows sports fans to act as scouts for their favorite soccer clubs. After watching a match, fans can submit scouting reports directly to clubs. This app aims to reduce the burden on professional scouts and increase fan engagement in a meaningful and rewarding way.
+
+⸻
+
+Background & Purpose:
+
+Japanese soccer clubs are currently facing a shortage of scouting personnel. Although passionate fans sometimes discover promising players, their insights are typically limited to social media. This app provides a direct channel for fans to support their clubs by submitting structured scouting reports. These fan contributions could potentially streamline club operations and reduce scouting costs.
+
+⸻
+
+Core Features:
+	•	Match Schedule Listings:
+Display upcoming matches (university leagues, JFA, J1-J3, etc.) that clubs are interested in.
+	•	Scouting Report Submission:
+Each club can create custom scouting report templates. Fans use these templates to evaluate players and submit reports after attending matches.
+	•	Fan Feedback & Rewards:
+Fans receive feedback when their reports are useful. Clubs can mark helpful reports with a “Like,” and fans may be rewarded for their contributions.
+
+⸻
+
+User Flow:
+	1.	Browse Matches:
+Fans open the app and browse upcoming matches that are eligible for scouting.
+	2.	Attend & Observe:
+Fans attend a selected match in person.
+	3.	Submit Reports:
+After the match, fans use the club’s provided template to create and upload a scouting report.
+	4.	Club Reviews & Responds:
+Clubs review submitted reports and give a “Like” to those that are helpful. This feedback loop encourages quality and fan engagement.
+
+⸻
+
+Goal:
+
+This app redefines the relationship between clubs and fans by making fans active contributors to club success. It also modernizes the scouting process across the Japanese soccer industry.
+
+⸻
+
+If you’d like, I can also create wireframes, UI ideas, or a project spec document based on this description.
