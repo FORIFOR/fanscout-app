@@ -2,7 +2,9 @@ import {
   users, type User, type InsertUser,
   clubs, type Club, type InsertClub,
   matches, type Match, type InsertMatch,
-  scoutingReports, type ScoutingReport, type InsertScoutingReport
+  scoutingReports, type ScoutingReport, type InsertScoutingReport,
+  notifications, type Notification, type InsertNotification,
+  rewards, type Reward, type InsertReward
 } from "@shared/schema";
 
 export interface IStorage {
@@ -10,6 +12,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserRewardPoints(userId: number, points: number): Promise<User | undefined>;
   
   // Club operations
   getClub(id: number): Promise<Club | undefined>;
@@ -27,7 +30,20 @@ export interface IStorage {
   getScoutingReportsByMatchId(matchId: number): Promise<ScoutingReport[]>;
   getScoutingReportsByClubId(clubId: number): Promise<ScoutingReport[]>;
   createScoutingReport(report: InsertScoutingReport): Promise<ScoutingReport>;
-  likeScoutingReport(id: number): Promise<ScoutingReport | undefined>;
+  likeScoutingReport(id: number, adminId?: number, feedback?: string): Promise<ScoutingReport | undefined>;
+  updateScoutingReportPhoto(id: number, photoUrl: string): Promise<ScoutingReport | undefined>;
+  
+  // Notification operations
+  getNotification(id: number): Promise<Notification | undefined>;
+  getNotificationsByUserId(userId: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  
+  // Reward operations
+  getReward(id: number): Promise<Reward | undefined>;
+  getRewardsByUserId(userId: number): Promise<Reward[]>;
+  createReward(reward: InsertReward): Promise<Reward>;
+  redeemReward(id: number): Promise<Reward | undefined>;
 }
 
 export class MemStorage implements IStorage {

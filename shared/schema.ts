@@ -10,11 +10,13 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   email: text("email").notNull().unique(),
   profileImage: text("profile_image"),
+  rewardPoints: integer("reward_points").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  rewardPoints: true,
   createdAt: true,
 });
 
@@ -25,11 +27,13 @@ export const clubs = pgTable("clubs", {
   logo: text("logo"),
   league: text("league").notNull(),
   description: text("description"),
+  isAdmin: boolean("is_admin").default(false), // Indicates if this is an admin user for the club
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertClubSchema = createInsertSchema(clubs).omit({
   id: true,
+  isAdmin: true,
   createdAt: true,
 });
 
@@ -67,14 +71,56 @@ export const scoutingReports = pgTable("scouting_reports", {
   potential: integer("potential").notNull(),
   observations: text("observations").notNull(),
   recommendation: text("recommendation").notNull(),
+  photoUrl: text("photo_url"), // URL to uploaded photo (optional)
   liked: boolean("liked").default(false),
+  likedAt: timestamp("liked_at"), // When the report was liked
+  likedBy: integer("liked_by"), // Which club admin liked the report
+  feedback: text("feedback"), // Optional feedback from club admins
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertScoutingReportSchema = createInsertSchema(scoutingReports).omit({
   id: true,
-  createdAt: true,
   liked: true,
+  likedAt: true,
+  likedBy: true,
+  feedback: true,
+  createdAt: true,
+});
+
+// Notification model for user notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // e.g., 'report_liked', 'reward_earned'
+  read: boolean("read").default(false),
+  relatedId: integer("related_id"), // ID of related entity (report, reward, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true, 
+  read: true,
+  createdAt: true,
+});
+
+// Reward records for tracking earned rewards
+export const rewards = pgTable("rewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  pointsEarned: integer("points_earned").notNull(),
+  rewardType: text("reward_type").notNull(), // e.g., 'tickets', 'merchandise', 'experience'
+  redeemed: boolean("redeemed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRewardSchema = createInsertSchema(rewards).omit({
+  id: true,
+  redeemed: true,
+  createdAt: true,
 });
 
 // Types
@@ -89,3 +135,9 @@ export type InsertMatch = z.infer<typeof insertMatchSchema>;
 
 export type ScoutingReport = typeof scoutingReports.$inferSelect;
 export type InsertScoutingReport = z.infer<typeof insertScoutingReportSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
