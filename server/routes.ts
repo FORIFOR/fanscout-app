@@ -1,16 +1,49 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from 'ws';
 import { storage } from "./storage";
 import { 
   insertUserSchema, 
   insertClubSchema, 
   insertMatchSchema, 
-  insertScoutingReportSchema
+  insertScoutingReportSchema,
+  insertNotificationSchema,
+  insertRewardSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from 'zod-validation-error';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+// Set up multer for file uploads
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure storage for multer
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded files
+  app.use('/uploads', (req, res, next) => {
+    const filePath = path.join(uploadsDir, req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      return res.sendFile(filePath);
+    }
+    next();
+  });
   // User routes
   app.post("/api/users", async (req, res) => {
     try {
@@ -216,7 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scouting-reports/:id/like", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedReport = await storage.likeScoutingReport(id);
+      const { adminId, feedback } = req.body;
+      const updatedReport = await storage.likeScoutingReport(id, adminId, feedback);
       
       if (!updatedReport) {
         return res.status(404).json({ error: "Scouting report not found" });
@@ -228,7 +262,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Photo upload for scouting reports
+  app.post("/api/scouting-reports/:id/photo", upload.single('photo'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      const photoUrl = `/uploads/${req.file.filename}`;
+      const updatedReport = await storage.updateScoutingReportPhoto(id, photoUrl);
+      
+      if (!updatedReport) {
+        return res.status(404).json({ error: "Scouting report not found" });
+      }
+      
+      return res.json(updatedReport);
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Notifications routes
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+      
+      const notifications = await storage.getNotificationsByUserId(parseInt(userId as string));
+      return res.json(notifications);
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      
+      return res.json(notification);
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Rewards routes
+  app.get("/api/rewards", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+      
+      const rewards = await storage.getRewardsByUserId(parseInt(userId as string));
+      return res.json(rewards);
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/rewards", async (req, res) => {
+    try {
+      const rewardData = insertRewardSchema.parse(req.body);
+      const reward = await storage.createReward(rewardData);
+      return res.status(201).json(reward);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/rewards/:id/redeem", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const reward = await storage.redeemReward(id);
+      
+      if (!reward) {
+        return res.status(404).json({ error: "Reward not found" });
+      }
+      
+      return res.json(reward);
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get user profile with related data
+  app.get("/api/user-profile/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Get user's reports
+      const reports = await storage.getScoutingReportsByUserId(id);
+      
+      // Get user's rewards
+      const rewards = await storage.getRewardsByUserId(id);
+      
+      // Get user's unread notifications count
+      const notifications = await storage.getNotificationsByUserId(id);
+      const unreadNotifications = notifications.filter(n => !n.read);
+      
+      // Count liked reports
+      const likedReports = reports.filter(r => r.liked);
+      
+      return res.json({
+        user,
+        reports,
+        likedReportsCount: likedReports.length,
+        rewards,
+        unreadNotificationsCount: unreadNotifications.length
+      });
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Set up WebSocket for realtime notifications
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('Client connected to WebSocket');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        // Subscribe to user notifications
+        if (data.type === 'subscribe' && data.userId) {
+          ws.userId = data.userId;
+          console.log(`User ${data.userId} subscribed to notifications`);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('Client disconnected from WebSocket');
+    });
+  });
   
   return httpServer;
 }
