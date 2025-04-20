@@ -59,7 +59,7 @@ export interface ScoutingFormData {
   clubId: number;
   playerName: string;
   playerAge: number;
-  playerPosition: PositionType;
+  playerPosition: string | PositionType;
   overallRating: ScoutingRating;
   technicalAbility: ScoutingRating;
   physicalAttributes: ScoutingRating;
@@ -67,5 +67,5 @@ export interface ScoutingFormData {
   mentalAttributes: ScoutingRating;
   potential: ScoutingRating;
   observations: string;
-  recommendation: RecommendationType;
+  recommendation: string | RecommendationType;
 }

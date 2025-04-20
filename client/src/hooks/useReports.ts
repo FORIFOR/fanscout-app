@@ -41,8 +41,25 @@ export function useReport(id: number | null) {
 
 export function useCreateReport() {
   const mutation = useMutation({
-    mutationFn: async (data: ScoutingFormData & { matchId: number, userId: number }) => {
+    mutationFn: async (data: Partial<ScoutingFormData> & { matchId: number, userId: number }) => {
       const response = await apiRequest('POST', '/api/scouting-reports', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/scouting-reports'] });
+    },
+  });
+
+  return mutation;
+}
+
+export function useUploadReportPhoto() {
+  const mutation = useMutation({
+    mutationFn: async ({ reportId, photoFile }: { reportId: number, photoFile: File }) => {
+      const formData = new FormData();
+      formData.append('photo', photoFile);
+      
+      const response = await apiRequest('POST', `/api/scouting-reports/${reportId}/photo`, formData);
       return response.json();
     },
     onSuccess: () => {

@@ -17,11 +17,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useClubs } from '@/hooks/useClubs';
-import { useCreateReport } from '@/hooks/useReports';
+import { useCreateReport, useUploadReportPhoto } from '@/hooks/useReports';
 import { useToast } from '@/hooks/use-toast';
 import { Match } from '@/types';
 import { Camera, Upload, X } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface ScoutingFormProps {
@@ -62,6 +61,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: ScoutingFormProps) {
   const { clubs } = useClubs();
   const createReport = useCreateReport();
+  const uploadPhoto = useUploadReportPhoto();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -137,13 +137,9 @@ export default function ScoutingForm({ match, onSubmitSuccess, onCancel }: Scout
       if (photoFile && createdReport) {
         setIsUploading(true);
         try {
-          const formData = new FormData();
-          formData.append('photo', photoFile);
-          
-          await apiRequest(`/api/scouting-reports/${createdReport.id}/photo`, {
-            method: 'POST',
-            body: formData,
-            // Don't set Content-Type header - the browser will set it with the boundary for multipart/form-data
+          await uploadPhoto.mutateAsync({
+            reportId: createdReport.id,
+            photoFile
           });
           
           toast({
