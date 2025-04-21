@@ -4,9 +4,15 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    // ✅ 本番用にビルド：クライアント + サーバーを生成
+    "build": "cd client && npm install && npm run build && cd .. && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js",
+
+    // ✅ 本番スタート：dist/index.js（ビルド済み）を起動
     "start": "NODE_ENV=production node dist/index.js",
+
+    // 開発用（ローカル時のみ使う）
+    "dev": "NODE_ENV=development tsx server/index.ts",
+
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
